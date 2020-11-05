@@ -1609,14 +1609,16 @@ int main(int argc, char **argv, char **envp) {
 
     std::stringstream stats;
     stats << '\n'
-     << "KLEE: done: total instructions = " << instructions << '\n'
+        << "KLEE: done: total instructions = " << instructions << '\n'
           << "KLEE: done: completed paths = " << handler->getNumPathsCompleted()
         << '\n'
-     << "KLEE: done: partiallycompleted paths = "
-          << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
+        << "KLEE: done: partially completed paths = " << handler->getNumPathsCompleted()
         << '\n'
-     << "KLEE: done: generated tests = "
-          << handler->getNumTestCases() << '\n';
+     << "KLEE: done: partiallycompletedpaths = "
+        << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
+        << '\n'
+        << "KLEE: done: generated tests = " << handler->getNumTestCases()
+        << '\n';
 
     bool useColors = llvm::errs().is_displayed();
     if (useColors)
