@@ -375,6 +375,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 #ifndef SUPPORT_KLEE_EH_CXX
       case Intrinsic::eh_typeid_for:
 #endif
+#ifndef SUPPORT_KLEE_EH_CXX
+      case Intrinsic::eh_typeid_for:
+#endif
+      case Intrinsic::exp2:
+      case Intrinsic::exp:
       case Intrinsic::expect:
       case Intrinsic::flt_rounds:
       case Intrinsic::frameaddress:
