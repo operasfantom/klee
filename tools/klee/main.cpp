@@ -187,18 +187,18 @@ namespace {
                              cl::init(false),
                              cl::cat(LinkCat));
 
-    cl::opt<bool>
-            WithFPRuntime("fp-runtime",
-                        cl::desc("Link with floating-point KLEE library."),
-                        cl::init(false),
-                            cl::cat(LinkCat));
+  cl::opt<bool>
+          WithFPRuntime("fp-runtime",
+                      cl::desc("Link with floating-point KLEE library."),
+                      cl::init(false),
+                          cl::cat(LinkCat));
 
-    cl::opt<std::string> RuntimeBuild(
-            "runtime-build",
-            cl::desc("Link with versions of the runtime library that were built with "
-                     "the provided configuration (default=" RUNTIME_CONFIGURATION
-                     ")."),
-            cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
+  cl::opt<std::string> RuntimeBuild(
+          "runtime-build",
+          cl::desc("Link with versions of the runtime library that were built with "
+                   "the provided configuration (default=" RUNTIME_CONFIGURATION
+                   ")."),
+          cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
 
     /*** Checks options ***/
 
