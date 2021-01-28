@@ -106,6 +106,7 @@ public:
     Free,
     Model,
     Overflow,
+    UndefinedBehavior,
     Ptr,
     ReadOnly,
     ReportError,
