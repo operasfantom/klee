@@ -134,8 +134,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   // operator new(unsigned long)
   add("_Znwm", handleNew, true),
 
-  // Run clang with "-fsanitize=undefined -fno-sanitize=vptr" or
-  // any its subset of checks except "-fsanitize=vptr"
+  // Run clang with "-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize=function"
+  // or any its subset of checks except "-fsanitize=vptr" and "-fsanitize=function"
   // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks
   add("__ubsan_handle_type_mismatch", handleTypeMismatch, false),
   add("__ubsan_handle_type_mismatch_abort", handleTypeMismatch, false),
