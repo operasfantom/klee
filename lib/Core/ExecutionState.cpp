@@ -72,7 +72,6 @@ StackFrame::~StackFrame() {
 
 ExecutionState::ExecutionState(KFunction *kf)
     : pc(kf->instructions), prevPC(pc) {
-  roundingMode = llvm::APFloat::rmNearestTiesToEven;
   pushFrame(nullptr, kf);
   setID();
 }
