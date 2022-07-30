@@ -438,7 +438,6 @@ const std::unordered_set <Intrinsic::ID> Executor::supportedFPIntrinsics = {
     Intrinsic::sqrt,
     Intrinsic::maxnum,
     Intrinsic::minnum,
-    Intrinsic::fma,
     Intrinsic::trunc,
     Intrinsic::rint
 };
@@ -1754,15 +1753,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         bindLocal(ki, state, result);
         break;
     }
-    case Intrinsic::fma: {
-        ref<Expr> op1 = eval(ki, 1, state).value;
-        ref<Expr> op2 = eval(ki, 2, state).value;
-        ref<Expr> op3 = eval(ki, 3, state).value;
-        assert(op1->getWidth() == op2->getWidth() && op2->getWidth() == op3->getWidth() && "type mismatch");
-        ref<Expr> result = FAddExpr::create(FMulExpr::create(op1, op2, state.roundingMode), op3, state.roundingMode);
-        bindLocal(ki, state, result);
-        break;
-    }
     case Intrinsic::trunc: {
         FPTruncInst *fi = cast<FPTruncInst>(i);
         Expr::Width resultType = getWidthForLLVMType(fi->getType());
@@ -1781,7 +1771,19 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         bindLocal(ki, state, result);
       break;
     }
-
+#ifdef ENABLE_FP
+    case Intrinsic::fma: {
+      ref<Expr> op1 = eval(ki, 1, state).value;
+      ref<Expr> op2 = eval(ki, 2, state).value;
+      ref<Expr> op3 = eval(ki, 3, state).value;
+      assert(op1->getWidth() == op2->getWidth() && op2->getWidth() == op3->getWidth() && "type mismatch");
+      ref<Expr> result = FAddExpr::create(FMulExpr::create(op1, op2, state.roundingMode), op3, state.roundingMode);
+      bindLocal(ki, state, result);
+      break;
+    }
+#else
+    case Intrinsic::fma:
+#endif
     case Intrinsic::fmuladd: {
       // Both fma and fmuladd support float, double and fp80.  Note, that fp80
       // is not mentioned in the documentation of fmuladd, nevertheless, it is

@@ -67,6 +67,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::vaend:
 #if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
       case Intrinsic::abs:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
       case Intrinsic::smax:
       case Intrinsic::smin:
       case Intrinsic::umax:
@@ -75,8 +77,6 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       // Floating point intrinsics
       case Intrinsic::fabs:
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
       case Intrinsic::fshr:
       case Intrinsic::fshl:
       case Intrinsic::maxnum:
