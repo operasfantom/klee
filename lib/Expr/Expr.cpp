@@ -455,9 +455,12 @@ void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   case Expr::Int128:
     os << "Expr::128";
     break;
-  case Expr::Int128: os << "Expr::Int128"; break;
-  case Expr::Int256: os << "Expr::Int256"; break;
-  case Expr::Int512: os << "Expr::Int512"; break;
+  case Expr::Int256:
+    os << "Expr::Int256";
+    break;
+  case Expr::Int512:
+    os << "Expr::Int512";
+    break;
   default:
     os << "<invalid type: " << (unsigned)width << ">";
   }
@@ -595,7 +598,6 @@ ConstantExpr::ConstantExpr(const llvm::APFloat &v)
 }
 
 const llvm::fltSemantics &ConstantExpr::widthToFloatSemantics(Width width) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
   switch (width) {
   case Expr::Int16:
     return llvm::APFloat::IEEEhalf();
@@ -610,22 +612,6 @@ const llvm::fltSemantics &ConstantExpr::widthToFloatSemantics(Width width) {
   default:
     return llvm::APFloat::Bogus();
   }
-#else
-  switch (width) {
-  case Expr::Int16:
-    return llvm::APFloat::IEEEhalf;
-  case Expr::Int32:
-    return llvm::APFloat::IEEEsingle;
-  case Expr::Int64:
-    return llvm::APFloat::IEEEdouble;
-  case Expr::Fl80:
-    return llvm::APFloat::x87DoubleExtended;
-  case 128:
-    return llvm::APFloat::IEEEquad;
-  default:
-    return llvm::APFloat::Bogus;
-  }
-#endif
 }
 
 const llvm::fltSemantics &ConstantExpr::getFloatSemantics() const {
@@ -634,11 +620,7 @@ const llvm::fltSemantics &ConstantExpr::getFloatSemantics() const {
 
 llvm::APFloat ConstantExpr::getAPFloatValue() const {
   const llvm::fltSemantics &fs = getFloatSemantics();
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
   assert(&fs != &(llvm::APFloat::Bogus()) && "Invalid float semantics");
-#else
-  assert(&fs != &(llvm::APFloat::Bogus) && "Invalid float semantics");
-#endif
   return llvm::APFloat(fs, getAPValue());
 }
 
@@ -1047,11 +1029,6 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
 // Floating point
 
 ref<ConstantExpr> ConstantExpr::GetNaN(Expr::Width w) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-#define LLVMFltSemantics(str) llvm::APFloat::str()
-#else
-#define LLVMFltSemantics(str) llvm::APFloat::str
-#endif
   // These values have been chosen to be consistent with Z3 when
   // rewriter.hi_fp_unspecified=false
   llvm::APInt apint;
@@ -1059,33 +1036,33 @@ ref<ConstantExpr> ConstantExpr::GetNaN(Expr::Width w) {
   switch (w) {
   case Int16: {
     apint = llvm::APInt(/*numBits=*/16, (uint64_t)0x7c01, /*isSigned=*/false);
-    sem = &(LLVMFltSemantics(IEEEhalf));
+    sem = &(llvm::APFloat::IEEEhalf());
     break;
   }
   case Int32: {
     apint =
         llvm::APInt(/*numBits=*/32, (uint64_t)0x7f800001, /*isSigned=*/false);
-    sem = &(LLVMFltSemantics(IEEEsingle));
+    sem = &(llvm::APFloat::IEEEsingle());
     break;
   }
   case Int64: {
     apint = llvm::APInt(/*numBits=*/64, (uint64_t)0x7ff0000000000001,
                         /*isSigned=*/false);
-    sem = &(LLVMFltSemantics(IEEEdouble));
+    sem = &(llvm::APFloat::IEEEdouble());
     break;
   }
   case Fl80: {
     // 0x7FFF8000000000000001
     uint64_t temp[] = {0x8000000000000001, (uint64_t)0x7FFF};
     apint = llvm::APInt(/*numBits=*/80, temp);
-    sem = &(LLVMFltSemantics(x87DoubleExtended));
+    sem = &(llvm::APFloat::x87DoubleExtended());
     break;
   }
   case Int128: {
     // 0x7FFF0000000000000000000000000001
     uint64_t temp[] = {0x0000000000000001, 0x7FFF000000000000};
     apint = llvm::APInt(/*numBits=*/128, temp);
-    sem = &(LLVMFltSemantics(IEEEquad));
+    sem = &(llvm::APFloat::IEEEquad());
     break;
   }
   }
@@ -1094,7 +1071,6 @@ ref<ConstantExpr> ConstantExpr::GetNaN(Expr::Width w) {
   llvm::APFloat asF(*sem, apint);
   assert(asF.isNaN() && "Failed to create a NaN");
 #endif
-#undef LLVMFltSemantics
   return ConstantExpr::alloc(apint);
 }
 

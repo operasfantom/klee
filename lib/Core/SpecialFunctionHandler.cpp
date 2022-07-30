@@ -1017,8 +1017,7 @@ void SpecialFunctionHandler::handleSetConcreteRoundingMode(
     llvm::APFloat::roundingMode newRoundingMode = llvm::APFloat::rmNearestTiesToEven;
     ref<Expr> roundingModeArg = arguments[0];
     if (!isa<ConstantExpr>(roundingModeArg)) {
-        executor.terminateStateOnError(state, "argument should be concrete",
-                                       Executor::User);
+        executor.terminateStateOnUserError(state, "argument should be concrete");
         return;
     }
     const ConstantExpr* CE = dyn_cast<ConstantExpr>(roundingModeArg);
@@ -1039,8 +1038,7 @@ void SpecialFunctionHandler::handleSetConcreteRoundingMode(
             newRoundingMode = llvm::APFloat::rmTowardZero;
             break;
         default:
-            executor.terminateStateOnError(state, "Invalid rounding mode",
-                                           Executor::User);
+            executor.terminateStateOnUserError(state, "Invalid rounding mode");
             return;
     }
     state.roundingMode = newRoundingMode;

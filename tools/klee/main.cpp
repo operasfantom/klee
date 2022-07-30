@@ -1266,158 +1266,160 @@ int main(int argc, char **argv, char **envp) {
   if (module_triple != host_triple)
     klee_warning("Module and host target triples do not match: '%s' != '%s'\n"
                  "This may cause unexpected crashes or assertion violations.",
-                 module_triple.c_str(), host_triple.c_str());// Detect architecture
-    std::string opt_suffix = "64"; // Fall back to 64bit
-    if (module_triple.find("i686") != std::string::npos ||
-        module_triple.find("i586") != std::string::npos ||
-        module_triple.find("i486") != std::string::npos ||
-        module_triple.find("i386") != std::string::npos)
-        opt_suffix = "32";
+                 module_triple.c_str(), host_triple.c_str());
 
-    // Add additional user-selected suffix
-    opt_suffix += "_" + RuntimeBuild.getValue();
+  // Detect architecture
+  std::string opt_suffix = "64"; // Fall back to 64bit
+  if (module_triple.find("i686") != std::string::npos ||
+      module_triple.find("i586") != std::string::npos ||
+      module_triple.find("i486") != std::string::npos ||
+      module_triple.find("i386") != std::string::npos)
+      opt_suffix = "32";
 
-    // Push the module as the first entry
-    loadedModules.emplace_back(std::move(M));
+  // Add additional user-selected suffix
+  opt_suffix += "_" + RuntimeBuild.getValue();
 
-    std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
-    Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
-            /*Optimize=*/OptimizeModule,
-            /*CheckDivZero=*/CheckDivZero,
-            /*CheckOvershift=*/CheckOvershift,
-                                  /*WithFPRuntime=*/WithFPRuntime);
+  // Push the module as the first entry
+  loadedModules.emplace_back(std::move(M));
 
-    if (WithPOSIXRuntime) {
-        SmallString<128> Path(Opts.LibraryDir);
-        llvm::sys::path::append(Path, "libkleeRuntimePOSIX" + opt_suffix + ".bca");
-        klee_message("NOTE: Using POSIX model: %s", Path.c_str());
-        if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                            errorMsg))
-            klee_error("error loading POSIX support '%s': %s", Path.c_str(),
-                       errorMsg.c_str());
+  std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
+  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
+          /*Optimize=*/OptimizeModule,
+          /*CheckDivZero=*/CheckDivZero,
+          /*CheckOvershift=*/CheckOvershift,
+                                /*WithFPRuntime=*/WithFPRuntime);
 
-        std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
-        preparePOSIX(loadedModules, libcPrefix);
-    }
+  if (WithPOSIXRuntime) {
+      SmallString<128> Path(Opts.LibraryDir);
+      llvm::sys::path::append(Path, "libkleeRuntimePOSIX" + opt_suffix + ".bca");
+      klee_message("NOTE: Using POSIX model: %s", Path.c_str());
+      if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
+                          errorMsg))
+          klee_error("error loading POSIX support '%s': %s", Path.c_str(),
+                     errorMsg.c_str());
 
-    if (WithFPRuntime) {
+      std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
+      preparePOSIX(loadedModules, libcPrefix);
+  }
+
+  if (WithFPRuntime) {
 #if ENABLE_FP
-        SmallString<128> Path(Opts.LibraryDir);
-        llvm::sys::path::append(Path, "libkleeRuntimeFp" + opt_suffix + ".bca");
-        if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                            errorMsg))
-            klee_error("error loading klee FP runtime '%s': %s", Path.c_str(), errorMsg.c_str());
+      SmallString<128> Path(Opts.LibraryDir);
+      llvm::sys::path::append(Path, "libkleeRuntimeFp" + opt_suffix + ".bca");
+      if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
+                          errorMsg))
+          klee_error("error loading klee FP runtime '%s': %s", Path.c_str(), errorMsg.c_str());
 #else
-        klee_error("unable to link with klee FP runtime without -DENABLE_FLOATING_POINT=ON");
+      klee_error("unable to link with klee FP runtime without -DENABLE_FLOATING_POINT=ON");
 #endif
-    }
+  }
 
-    if (Libcxx) {
+  if (Libcxx) {
 #ifndef SUPPORT_KLEE_LIBCXX
-        klee_error("KLEE was not compiled with libc++ support");
+      klee_error("KLEE was not compiled with libc++ support");
 #else
-        SmallString<128> LibcxxBC(Opts.LibraryDir);
-    llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
-    if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
-                        errorMsg))
-      klee_error("error loading libc++ '%s': %s", LibcxxBC.c_str(),
-                 errorMsg.c_str());
-    klee_message("NOTE: Using libc++ : %s", LibcxxBC.c_str());
+      SmallString<128> LibcxxBC(Opts.LibraryDir);
+  llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
+  if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
+                      errorMsg))
+    klee_error("error loading libc++ '%s': %s", LibcxxBC.c_str(),
+               errorMsg.c_str());
+  klee_message("NOTE: Using libc++ : %s", LibcxxBC.c_str());
 #ifdef SUPPORT_KLEE_EH_CXX
-    SmallString<128> EhCxxPath(Opts.LibraryDir);
-    llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
-    if (!klee::loadFile(EhCxxPath.c_str(), mainModule->getContext(),
-                        loadedModules, errorMsg))
-      klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
-                 errorMsg.c_str());
-    klee_message("NOTE: Enabled runtime support for C++ exceptions");
+  SmallString<128> EhCxxPath(Opts.LibraryDir);
+  llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
+  if (!klee::loadFile(EhCxxPath.c_str(), mainModule->getContext(),
+                      loadedModules, errorMsg))
+    klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
+               errorMsg.c_str());
+  klee_message("NOTE: Enabled runtime support for C++ exceptions");
 #else
-    klee_message("NOTE: KLEE was not compiled with support for C++ exceptions");
+  klee_message("NOTE: KLEE was not compiled with support for C++ exceptions");
 #endif
 #endif
-    }
+  }
 
-    switch (Libc) {
-        case LibcType::KleeLibc: {
-            // FIXME: Find a reasonable solution for this.
-            SmallString<128> Path(Opts.LibraryDir);
-            llvm::sys::path::append(Path,
-                                    "libkleeRuntimeKLEELibc" + opt_suffix + ".bca");
-            if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                                errorMsg))
-                klee_error("error loading klee libc '%s': %s", Path.c_str(),
-                           errorMsg.c_str());
-        }
-            /* Falls through. */
-        case LibcType::FreestandingLibc: {
-            SmallString<128> Path(Opts.LibraryDir);
-            llvm::sys::path::append(Path,
-                                    "libkleeRuntimeFreestanding" + opt_suffix + ".bca");
-            if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                                errorMsg))
-                klee_error("error loading freestanding support '%s': %s", Path.c_str(),
-                           errorMsg.c_str());
-            break;
-        }
-        case LibcType::UcLibc:
-            linkWithUclibc(LibraryDir, opt_suffix, loadedModules);
-            break;
-    }
+  switch (Libc) {
+      case LibcType::KleeLibc: {
+          // FIXME: Find a reasonable solution for this.
+          SmallString<128> Path(Opts.LibraryDir);
+          llvm::sys::path::append(Path,
+                                  "libkleeRuntimeKLEELibc" + opt_suffix + ".bca");
+          if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
+                              errorMsg))
+              klee_error("error loading klee libc '%s': %s", Path.c_str(),
+                         errorMsg.c_str());
+      }
+          /* Falls through. */
+      case LibcType::FreestandingLibc: {
+          SmallString<128> Path(Opts.LibraryDir);
+          llvm::sys::path::append(Path,
+                                  "libkleeRuntimeFreestanding" + opt_suffix + ".bca");
+          if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
+                              errorMsg))
+              klee_error("error loading freestanding support '%s': %s", Path.c_str(),
+                         errorMsg.c_str());
+          break;
+      }
+      case LibcType::UcLibc:
+          linkWithUclibc(LibraryDir, opt_suffix, loadedModules);
+          break;
+  }
 
-    for (const auto &library : LinkLibraries) {
-        if (!klee::loadFile(library, mainModule->getContext(), loadedModules,
-                            errorMsg))
-            klee_error("error loading bitcode library '%s': %s", library.c_str(),
-                       errorMsg.c_str());
-    }
+  for (const auto &library : LinkLibraries) {
+      if (!klee::loadFile(library, mainModule->getContext(), loadedModules,
+                          errorMsg))
+          klee_error("error loading bitcode library '%s': %s", library.c_str(),
+                     errorMsg.c_str());
+  }
 
-    // FIXME: Change me to std types.
-    int pArgc;
-    char **pArgv;
-    char **pEnvp;
-    if (Environ != "") {
-        std::vector<std::string> items;
-        std::ifstream f(Environ.c_str());
-        if (!f.good())
-            klee_error("unable to open --environ file: %s", Environ.c_str());
-        while (!f.eof()) {
-            std::string line;
-            std::getline(f, line);
-            line = strip(line);
-            if (!line.empty())
-                items.push_back(line);
-        }
-        f.close();
-        pEnvp = new char *[items.size()+1];
-        unsigned i=0;
-        for (; i != items.size(); ++i)
-            pEnvp[i] = strdup(items[i].c_str());
-        pEnvp[i] = 0;
-    } else {
-        pEnvp = envp;
-    }
+  // FIXME: Change me to std types.
+  int pArgc;
+  char **pArgv;
+  char **pEnvp;
+  if (Environ != "") {
+      std::vector<std::string> items;
+      std::ifstream f(Environ.c_str());
+      if (!f.good())
+          klee_error("unable to open --environ file: %s", Environ.c_str());
+      while (!f.eof()) {
+          std::string line;
+          std::getline(f, line);
+          line = strip(line);
+          if (!line.empty())
+              items.push_back(line);
+      }
+      f.close();
+      pEnvp = new char *[items.size()+1];
+      unsigned i=0;
+      for (; i != items.size(); ++i)
+          pEnvp[i] = strdup(items[i].c_str());
+      pEnvp[i] = 0;
+  } else {
+      pEnvp = envp;
+  }
 
-    pArgc = InputArgv.size() + 1;
-    pArgv = new char *[pArgc];
-    for (unsigned i=0; i<InputArgv.size()+1; i++) {
-        std::string &arg = (i==0 ? InputFile : InputArgv[i-1]);
-        unsigned size = arg.size() + 1;
-        char *pArg = new char[size];
+  pArgc = InputArgv.size() + 1;
+  pArgv = new char *[pArgc];
+  for (unsigned i=0; i<InputArgv.size()+1; i++) {
+      std::string &arg = (i==0 ? InputFile : InputArgv[i-1]);
+      unsigned size = arg.size() + 1;
+      char *pArg = new char[size];
 
-        std::copy(arg.begin(), arg.end(), pArg);
-        pArg[size - 1] = 0;
+      std::copy(arg.begin(), arg.end(), pArg);
+      pArg[size - 1] = 0;
 
-        pArgv[i] = pArg;
-    }
+      pArgv[i] = pArg;
+  }
 
-    std::vector<bool> replayPath;
+  std::vector<bool> replayPath;
 
-    if (ReplayPathFile != "") {
-        KleeHandler::loadPathFile(ReplayPathFile, replayPath);
-    }
+  if (ReplayPathFile != "") {
+      KleeHandler::loadPathFile(ReplayPathFile, replayPath);
+  }
 
-    Interpreter::InterpreterOptions IOpts;
-    IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
+  Interpreter::InterpreterOptions IOpts;
+  IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   std::unique_ptr<KleeHandler> handler =
       std::make_unique<KleeHandler>(pArgc, pArgv);
   std::unique_ptr<Interpreter> interpreter(

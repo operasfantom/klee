@@ -81,14 +81,9 @@ llvm::APFloat evalSqrt(const llvm::APFloat &v, llvm::APFloat::roundingMode rm) {
     llvm::errs() << "Failed to store fenv\n";
     abort();
   }
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-#define LLVMFltSemantics(str) llvm::APFloat::str()
-#else
-#define LLVMFltSemantics(str) llvm::APFloat::str
-#endif
   const llvm::fltSemantics *sem = &(v.getSemantics());
   llvm::APFloat resultAPF = llvm::APFloat::getZero(*sem);
-  if (sem == &(LLVMFltSemantics(IEEEsingle))) {
+  if (sem == &(llvm::APFloat::IEEEsingle())) {
     float asF = v.convertToFloat();
     assert(sizeof(float) * 8 == 32);
 
@@ -98,7 +93,7 @@ llvm::APFloat evalSqrt(const llvm::APFloat &v, llvm::APFloat::roundingMode rm) {
     restore_fenv(&oldEnv);
     resultAPF = llvm::APFloat(evaluatedValue);
 
-  } else if (sem == &(LLVMFltSemantics(IEEEdouble))) {
+  } else if (sem == &(llvm::APFloat::IEEEdouble())) {
     double asD = v.convertToDouble();
     assert(sizeof(double) * 8 == 64);
 
@@ -110,7 +105,7 @@ llvm::APFloat evalSqrt(const llvm::APFloat &v, llvm::APFloat::roundingMode rm) {
 
   }
 #if defined(__x86_64__) || defined(__i386__)
-  else if (sem == &(LLVMFltSemantics(x87DoubleExtended))) {
+  else if (sem == &(llvm::APFloat::x87DoubleExtended())) {
     llvm::APInt apint = v.bitcastToAPInt();
     assert(apint.getBitWidth() == 80);
     long double asLD = klee::GetNativeX87FP80FromLLVMAPInt(apint);
@@ -122,14 +117,13 @@ llvm::APFloat evalSqrt(const llvm::APFloat &v, llvm::APFloat::roundingMode rm) {
 
     llvm::APInt resultApint = klee::GetAPIntFromLongDouble(evaluatedValue);
 
-    resultAPF = llvm::APFloat(LLVMFltSemantics(x87DoubleExtended), resultApint);
+    resultAPF = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), resultApint);
   }
 #endif
   else {
     llvm::errs() << "Float semantics not supported\n";
     abort();
   }
-#undef LLVMFltSemantics
   return resultAPF;
 }
 } // namespace klee

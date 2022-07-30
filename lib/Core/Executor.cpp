@@ -1689,20 +1689,22 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     Intrinsic::ID id = f->getIntrinsicID();
     if (supportedFPIntrinsics.find(id) != supportedFPIntrinsics.end()) {
       klee_warning("unimplemented intrinsic: %s", f->getName().data());
-      klee_message("You may enable this intrinsic by passing the following options"
-        " to cmake:\n"
-        "\"-DENABLE_FLOATING_POINT=ON\"\n");
-      terminateStateOnError(state, "unimplemented intrinsic", Unhandled);
+      klee_message(
+          "You may enable this intrinsic by passing the following options"
+          " to cmake:\n"
+          "\"-DENABLE_FLOATING_POINT=ON\"\n");
+      terminateStateOnExecError(state, "unimplemented intrinsic");
       return;
     }
     if (modelledFPIntrinsics.find(id) != modelledFPIntrinsics.end()) {
       klee_warning("unimplemented intrinsic: %s", f->getName().data());
-      klee_message("You may enable this intrinsic by passing the following options"
-        " to cmake:\n"
-        "\"-DENABLE_FLOATING_POINT=ON\"\n"
-        "\"-DENABLE_FP_RUNTIME=ON\"\n");
-        terminateStateOnError(state, "unimplemented intrinsic", Unhandled);
-        return;
+      klee_message(
+          "You may enable this intrinsic by passing the following options"
+          " to cmake:\n"
+          "\"-DENABLE_FLOATING_POINT=ON\"\n"
+          "\"-DENABLE_FP_RUNTIME=ON\"\n");
+      terminateStateOnExecError(state, "unimplemented intrinsic");
+      return;
     }
 #endif
     switch (f->getIntrinsicID()) {
@@ -1780,7 +1782,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
-    case Intrinsic::fma:
     case Intrinsic::fmuladd: {
       // Both fma and fmuladd support float, double and fp80.  Note, that fp80
       // is not mentioned in the documentation of fmuladd, nevertheless, it is
@@ -2855,14 +2856,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 
-    for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
-           it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
-         it != ie; ++it) {
-      uint64_t elementSize = it->second;
-      ref<Expr> index = eval(ki, it->first, state).value;
-      base = AddExpr::create(base,
-                             MulExpr::create(Expr::createSExtToPointerWidth(index),
-                                             Expr::createPointer(elementSize)));
+    for (const auto &indice : kgepi->indices) {
+      uint64_t elementSize = indice.second;
+      ref<Expr> index = eval(ki, indice.first, state).value;
+      base = AddExpr::create(
+          base, MulExpr::create(Expr::createSExtToPointerWidth(index),
+                                Expr::createPointer(elementSize)));
     }
     if (kgepi->offset)
       base = AddExpr::create(base,
@@ -2929,7 +2928,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
-#endif
 
   case Instruction::FAdd: {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
@@ -3234,13 +3232,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       break;
   }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
   case Instruction::FNeg: {
       ref<Expr> expr = eval(ki, 0, state).value;
       bindLocal(ki, state, FNegExpr::create(expr));
       break;
   }
-#endif
 
   case Instruction::FRem: {
       ref<Expr> left = eval(ki, 0, state).value;
@@ -3340,7 +3336,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, result);
     break;
   }
-#endif //ENABLE_FP
+#endif // ENABLE_FP
 
   case Instruction::InsertValue: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
@@ -4160,7 +4156,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   if (roundingMode == -1) {
       std::string msg("Cannot set rounding mode for external call to ");
       msg += LLVMRoundingModeToString(state.roundingMode);
-      terminateStateOnError(state, msg, External);
+      terminateStateOnError(state, msg, StateTerminationType::External);
       return;
   }
 

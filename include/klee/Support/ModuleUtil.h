@@ -61,24 +61,24 @@ linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
 /// There are some functions with provided implementations in runtime/klee-fp, but not explicitly replaced here.
 /// Should we rename them and complete the list?
 const std::vector <std::pair<std::string, std::string>> floatReplacements = {
-    addFunctionReplacement(__isnan, klee_internal_isnan),
-    addFunctionReplacement(isnan, klee_internal_isnan),
-    addFunctionReplacement(__isinf, klee_internal_isinf),
-    addFunctionReplacement(isinf, klee_internal_isinf),
-    addFunctionReplacement(__fpclassify, klee_internal_fpclassify),
-    addFunctionReplacement(fpclassify, klee_internal_fpclassify),
+    addFunctionReplacement(ceil, ceil),
+    addFunctionReplacement(copysign, copysign),
+    addFunctionReplacement(fabs, klee_internal_fabs),
     addFunctionReplacement(__finite, klee_internal_finite),
     addFunctionReplacement(finite, klee_internal_finite),
-    addFunctionReplacement(sqrt, klee_internal_sqrt),
-    addFunctionReplacement(fabs, klee_internal_fabs),
+    addFunctionReplacement(floor, klee_floor),
+    addFunctionReplacement(__fpclassify, klee_internal_fpclassify),
+    addFunctionReplacement(fpclassify, klee_internal_fpclassify),
+    addFunctionReplacement(__isinf, klee_internal_isinf),
+    addFunctionReplacement(isinf, klee_internal_isinf),
+    addFunctionReplacement(__isnan, klee_internal_isnan),
+    addFunctionReplacement(isnan, klee_internal_isnan),
     addFunctionReplacement(rint, klee_internal_rint),
     addFunctionReplacement(round, klee_internal_rint),
-    addIntrinsicReplacement(rint, klee_internal_rint),
-    addIntrinsicReplacement(round, klee_internal_rint),
+    addFunctionReplacement(sqrt, klee_internal_sqrt),
+
     addIntrinsicReplacement(nearbyint, nearbyint),
-    addIntrinsicReplacement(copysign, copysign),
-    addIntrinsicReplacement(floor, klee_floor),
-    addIntrinsicReplacement(ceil, ceil)
+    addIntrinsicReplacement(rint, klee_internal_rint),
 };
 #undef addFunctionReplacement
 #undef addIntrinsicReplacement
