@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --libc=klee --output-dir=%t.klee-out --exit-on-error %t1.bc > %t-output.txt 2>&1
+// RUN: %klee --libc=klee --solver-backend=z3 --output-dir=%t.klee-out --exit-on-error %t1.bc > %t-output.txt 2>&1
 // RUN: FileCheck -input-file=%t-output.txt %s
 #include "klee/klee.h"
 #include <stdio.h>
@@ -16,7 +16,7 @@ int main() {
   z = y - x;
   if ( z < y ) {
     // Note this branch should not be feasible when modelling floating point
-    // constraints precisely. However when using reals to approximate floats
+    // constraints precisely. However, when using reals to approximate floats
     // then this branch is feasible.
     klee_report_error(__FILE__, __LINE__, "Branch should not be reachable", "fpfeas");
   } else {
