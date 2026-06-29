@@ -61,6 +61,9 @@ UBSAN_CHECK(ImplicitSignedIntegerTruncationOrSignChange,
 UBSAN_CHECK(InvalidShiftBase, "invalid-shift-base", "shift-base")
 UBSAN_CHECK(InvalidShiftExponent, "invalid-shift-exponent", "shift-exponent")
 UBSAN_CHECK(OutOfBoundsIndex, "out-of-bounds-index", "bounds")
+#if LLVM_VERSION_CODE >= LLVM_VERSION(20, 0)
+UBSAN_CHECK(LocalOutOfBounds, "local-out-of-bounds", "local-bounds")
+#endif
 UBSAN_CHECK(UnreachableCall, "unreachable-call", "unreachable")
 UBSAN_CHECK(MissingReturn, "missing-return", "return")
 UBSAN_CHECK(NonPositiveVLAIndex, "non-positive-vla-index", "vla-bound")

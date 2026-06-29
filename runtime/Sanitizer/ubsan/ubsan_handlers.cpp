@@ -80,6 +80,10 @@ static const char *get_suffix(ErrorType ET) {
     return "overflow.err";
   case ErrorType::OutOfBoundsIndex:
     return "ptr.err";
+#if LLVM_VERSION_CODE >= LLVM_VERSION(20, 0)
+  case ErrorType::LocalOutOfBounds:
+    return "local_bounds.err";
+#endif
   case ErrorType::UnreachableCall:
     return "unreachable_call.err";
   case ErrorType::MissingReturn:
@@ -299,6 +303,21 @@ extern "C" void __ubsan_handle_out_of_bounds_abort(OutOfBoundsData *Data,
                                                    ValueHandle Index) {
   handleOutOfBoundsImpl(Data, Index);
 }
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(20, 0)
+static void handleLocalOutOfBoundsImpl() {
+  ErrorType ET = ErrorType::LocalOutOfBounds;
+  report_error_type(ET);
+}
+
+extern "C" void __ubsan_handle_local_out_of_bounds() {
+  handleLocalOutOfBoundsImpl();
+}
+
+extern "C" void __ubsan_handle_local_out_of_bounds_abort() {
+  handleLocalOutOfBoundsImpl();
+}
+#endif
 
 static void handleBuiltinUnreachableImpl(UnreachableData * /*Data*/) {
   ErrorType ET = ErrorType::UnreachableCall;

@@ -19,8 +19,10 @@ add one of the following options:
 * Short exclusive form
     * LLVM 16 and lower
         * `-fsanitize=undefined,float-divide-by-zero,unsigned-integer-overflow,implicit-conversion,nullability -fno-sanitize=local-bounds,function,vptr`
-    * LLVM 17 and higher
+    * LLVM 17 through 19
         * `-fsanitize=undefined,float-divide-by-zero,unsigned-integer-overflow,implicit-conversion,nullability -fno-sanitize=local-bounds,vptr`
+    * LLVM 20 and higher
+        * `-fsanitize=undefined,local-bounds,float-divide-by-zero,unsigned-integer-overflow,implicit-conversion,nullability -fno-sanitize=vptr`
 * Verbose inclusive form
     * LLVM 11 and lower
         * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
@@ -28,16 +30,20 @@ add one of the following options:
         * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,unsigned-shift-base,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
     * LLVM 17 through 18
         * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,function,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,unsigned-shift-base,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
-    * LLVM 19 and higher
+    * LLVM 19
         * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,function,implicit-bitfield-conversion,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,unsigned-shift-base,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
+    * LLVM 20 and higher
+        * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,function,implicit-bitfield-conversion,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,local-bounds,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,unsigned-shift-base,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
 
 For compiling/linking with **all** available checks to catch **only** undefined behaviour, just add
 the following option:
 
 * LLVM 16 and lower
     * `-fsanitize=undefined -fno-sanitize=local-bounds,function,vptr`
-* LLVM 17 and higher
+* LLVM 17 through 19
     * `-fsanitize=undefined -fno-sanitize=local-bounds,vptr`
+* LLVM 20 and higher
+    * `-fsanitize=undefined,local-bounds -fno-sanitize=vptr`
 
 ## Available checks
 
@@ -56,6 +62,7 @@ Available checks for KLEE as are:
 * `-fsanitize=implicit-signed-integer-truncation`
 * `-fsanitize=implicit-integer-sign-change`
 * `-fsanitize=integer-divide-by-zero`
+* `-fsanitize=local-bounds` (LLVM 20 and higher)
 * `-fsanitize=nonnull-attribute`
 * `-fsanitize=null`
 * `-fsanitize=nullability-arg`
@@ -76,7 +83,7 @@ Available checks for KLEE as are:
 
 Also, note some unavailable checks as are:
 
-* `-fsanitize=local-bounds`
+* `-fsanitize=local-bounds` (LLVM 19 and lower)
 * `-fsanitize=function` (LLVM 16 and lower)
 * `-fsanitize=objc-cast`
 * `-fsanitize=vptr`

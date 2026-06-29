@@ -61,7 +61,8 @@ enum class StateTerminationClass : std::uint8_t {
   TTYPE(InvalidLoad, 44U, "invalid_load.err")                                  \
   TTYPE(NullableAttribute, 45U, "nullable_attribute.err")                      \
   TTYPE(FunctionTypeMismatch, 46U, "function_type_mismatch.err")               \
-  TTMARK(PROGERR, 46U)                                                         \
+  TTYPE(LocalBounds, 47U, "local_bounds.err")                                  \
+  TTMARK(PROGERR, 47U)                                                         \
   TTYPE(User, 50U, "user.err")                                                 \
   TTMARK(USERERR, 50U)                                                         \
   TTYPE(Execution, 60U, "exec.err")                                            \
