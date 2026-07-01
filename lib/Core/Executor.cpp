@@ -64,6 +64,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -684,6 +685,68 @@ void Executor::initializeGlobals(ExecutionState &state) {
   initializeGlobalObjects(state);
 }
 
+MemoryObject *
+Executor::allocateFunctionMemoryObject(ExecutionState &state,
+                                       Function &function,
+                                       std::uint64_t prefixBytes) {
+  // KLEE has historically represented each function with an aligned 8-byte
+  // synthetic object. Reserve any requested prefix bytes before that object so
+  // callers can expose an adjusted function address.
+  constexpr std::uint64_t LegacyFunctionObjectBytes = 8;
+  constexpr std::uint64_t FunctionObjectBytes = LegacyFunctionObjectBytes;
+  constexpr std::uint64_t FunctionObjectAlignment = LegacyFunctionObjectBytes;
+
+  return memory->allocate(prefixBytes + FunctionObjectBytes,
+                          /*isLocal=*/false, /*isGlobal=*/true, &state,
+                          /*allocSite=*/&function, FunctionObjectAlignment);
+}
+
+std::uint64_t
+Executor::allocateFunctionObject(ExecutionState &state, Function &function) {
+  constexpr std::uint64_t NoPrefixBytes = 0;
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(17, 0)
+  auto *MD = function.getMetadata(LLVMContext::MD_func_sanitize);
+  if (MD == nullptr) {
+    auto *mo = allocateFunctionMemoryObject(state, function, NoPrefixBytes);
+    return mo->address;
+  }
+
+  // LLVM emits the function sanitizer prefix as 32-bit integer constants: the
+  // sanitizer prologue signature followed by the instrumented function's type
+  // hash. Keep the synthetic object layout tied to that ABI word type.
+  using PrefixWord = std::uint32_t;
+  constexpr unsigned PrefixWords = 2;
+  constexpr std::uint64_t WordBytes = sizeof(PrefixWord);
+  constexpr std::uint64_t PrefixBytes = PrefixWords * WordBytes;
+
+  // Clang's function sanitizer emits two 32-bit words immediately before each
+  // instrumented function and checks them via function_pointer minus the
+  // prefix size before calling __ubsan_handle_function_type_mismatch.
+  PrefixWord prefix[PrefixWords] = {0, 0};
+  assert(MD->getNumOperands() == PrefixWords &&
+         "unexpected function sanitizer metadata shape");
+  for (unsigned i = 0; i < PrefixWords; ++i) {
+    auto *CI = mdconst::extract<ConstantInt>(MD->getOperand(i));
+    assert(CI->getBitWidth() == Expr::Int32 &&
+           "unexpected function sanitizer metadata word width");
+    prefix[i] = CI->getZExtValue();
+  }
+
+  auto *mo = allocateFunctionMemoryObject(state, function, PrefixBytes);
+  ObjectState *os = bindObjectInState(state, mo, false);
+  for (unsigned i = 0; i < PrefixWords; ++i)
+    os->write32(i * WordBytes, prefix[i]);
+  os->setReadOnly(true);
+
+  const std::uint64_t functionAddress = mo->address + PrefixBytes;
+  return functionAddress;
+#else
+  auto *mo = allocateFunctionMemoryObject(state, function, NoPrefixBytes);
+  return mo->address;
+#endif
+}
+
 void Executor::allocateGlobalObjects(ExecutionState &state) {
   Module *m = kmodule->module.get();
 
@@ -706,9 +769,9 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
       // We allocate an object to represent each function,
       // its address can be used for function pointers.
       // TODO: Check whether the object is accessed?
-      auto mo = memory->allocate(8, false, true, &state, &f, 8);
-      addr = Expr::createPointer(mo->address);
-      legalFunctions.emplace(mo->address, &f);
+      auto functionAddress = allocateFunctionObject(state, f);
+      addr = Expr::createPointer(functionAddress);
+      legalFunctions.emplace(functionAddress, &f);
     }
 
     globalAddresses.emplace(&f, addr);

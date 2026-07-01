@@ -32,6 +32,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
@@ -228,6 +229,44 @@ private:
 			      unsigned offset);
   void initializeGlobals(ExecutionState &state);
   void allocateGlobalObjects(ExecutionState &state);
+
+  MemoryObject *allocateFunctionMemoryObject(ExecutionState &state,
+                                             llvm::Function &function,
+                                             std::uint64_t prefixBytes);
+
+  /// Allocate KLEE's synthetic object for a function and return the concrete
+  /// address that should be used as the function pointer value.
+  ///
+  /// LLVM's function sanitizer can attach `func_sanitize` metadata to a
+  /// function. Native code generation places those two 32-bit metadata values
+  /// immediately before the function entry and emits indirect-call checks that
+  /// read the prefix immediately before the function pointer. For such
+  /// functions, the synthetic object includes that prefix while the public
+  /// function address points after it. Non-instrumented functions keep the
+  /// existing synthetic function object layout.
+  ///
+  /// For instrumented functions, the allocation and returned address look like:
+  ///   mo->address             mo->address + 4      returned function address
+  ///   v                       v                    v
+  ///   +----------------------+--------------------+--------------------------+
+  ///   | prologue signature   | function type hash | synthetic function object |
+  ///   +----------------------+--------------------+--------------------------+
+  ///
+  /// The returned address is stored in `globalAddresses` and `legalFunctions`.
+  /// LLVM's indirect-call check loads the prologue signature from that address
+  /// minus 8 and the type hash from that address minus 4.
+  ///
+  /// Relevant LLVM implementation references:
+  /// - https://github.com/llvm/llvm-project/blob/release/17.x/clang/lib/CodeGen/CodeGenFunction.cpp
+  ///   sets `MD_func_sanitize`.
+  /// - https://github.com/llvm/llvm-project/blob/release/17.x/llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp
+  ///   emits the prefix words.
+  /// - https://github.com/llvm/llvm-project/blob/release/17.x/clang/lib/CodeGen/CGExpr.cpp
+  ///   emits the indirect-call prefix reads.
+  /// - https://github.com/llvm/llvm-project/blob/release/17.x/compiler-rt/lib/ubsan/ubsan_handlers.h
+  ///   defines the handler ABI.
+  std::uint64_t allocateFunctionObject(ExecutionState &state,
+                                       llvm::Function &function);
   void initializeGlobalAliases();
   void initializeGlobalObjects(ExecutionState &state);
 
